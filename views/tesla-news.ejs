@@ -52,6 +52,9 @@
                             <a class="nav-link" href="/main">Main</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="/news">News</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="/teslanews">Tesla</a>
                         </li>
                         <li class="nav-item">
@@ -71,7 +74,8 @@
             <h1 class="mb-4">Tesla News</h1>
 
             <div class="row">
-                <% teslaNews.forEach(article => { %>
+                <% if (teslaNews && teslaNews.length > 0) { %> <%
+                teslaNews.forEach(article => { %>
                 <div class="col-md-4 mb-4">
                     <div class="card">
                         <img
@@ -91,7 +95,9 @@
                         </div>
                     </div>
                 </div>
-                <% }); %>
+                <% }); %> <% } else { %>
+                <p>No Tesla news available.</p>
+                <% } %>
             </div>
         </div>
 
