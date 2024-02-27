@@ -4,6 +4,8 @@ const bcrypt = require("bcrypt");
 const session = require("express-session");
 const mongoose = require("mongoose");
 const path = require("path");
+const api = require("./api");
+const axios = require("axios");
 
 const app = express();
 const port = 3000;
@@ -140,8 +142,20 @@ app.post("/login", async (req, res) => {
     }
 });
 
-app.get("/admin", requireAuth, (req, res) => {
-    res.render("admin", { username: req.user.username });
+app.get("/admin", requireAuth, async (req, res) => {
+    try {
+        // Fetch the users from the database (replace this with your actual logic)
+        const users = await User.find();
+
+        res.render("admin", {
+            username: req.user.username,
+            users: users,
+            user: {},
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
 });
 
 // Main Page - Frontend with Authorization Middleware
@@ -157,6 +171,158 @@ app.get("/main", requireAuth, async (req, res) => {
 
         // Render the EJS main page with the user's name
         res.render("main", { username: user.username });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+app.get("/teslanews", requireAuth, async (req, res) => {
+    try {
+        const newsArticles = await api.getTeslaNews();
+        console.log("Tesla News Articles:", newsArticles); // Add this line
+        res.render("tesla-news", {
+            teslaNews: newsArticles,
+            page: "teslanews",
+        });
+    } catch (error) {
+        console.error("Error fetching Tesla news:", error);
+        res.status(500).json({ error: error });
+    }
+});
+
+const faceitApiUrl = "https://open.faceit.com/data/v4/players/";
+
+const headers = {
+    "Content-Type": "application/json",
+    Authorization: "Bearer 3b5a9d07-4b77-4be4-bf5d-f9ff3d6cb7b6",
+};
+
+app.get("/", requireAuth, async function (req, res) {
+    try {
+        // Extracting Faceit player ID from the query parameter
+        const playerId = req.query.playerId;
+
+        if (!playerId) {
+            return res.render("index", { result: null });
+        }
+
+        const playerStatsUrl = `${faceitApiUrl}${playerId}/games/cs2/stats?offset=0&limit=20`;
+        const response = await axios.get(playerStatsUrl, { headers });
+
+        const totalKd = response.data.items.reduce(
+            (acc, item) => acc + Number(item.stats["K/D Ratio"]),
+            0
+        );
+        const averageKd = (totalKd / response.data.items.length).toFixed(2);
+
+        const totalKr = response.data.items.reduce(
+            (acc, item) => acc + Number(item.stats["K/R Ratio"]),
+            0
+        );
+        const averageKr = (totalKr / response.data.items.length).toFixed(2);
+
+        const totalHeadshots = response.data.items.reduce(
+            (acc, item) => acc + Number(item.stats["Headshots"]),
+            0
+        );
+        const averageHeadshots = (
+            totalHeadshots / response.data.items.length
+        ).toFixed(2);
+
+        const totalKills = response.data.items.reduce(
+            (acc, item) => acc + Number(item.stats["Kills"]),
+            0
+        );
+        const averageKills = (totalKills / response.data.items.length).toFixed(
+            2
+        );
+
+        const formattedOutput = `
+        Nickname: ${response.data.items[0].stats.Nickname}
+        Overall Average K/D: ${averageKd}
+        Overall Average K/R: ${averageKr}
+        Overall Average Headshots: ${averageHeadshots}
+        Overall Average Kills: ${averageKills}
+    `;
+
+        res.render("index", { result: formattedOutput });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Error fetching data from Faceit API");
+    }
+});
+
+app.post("/admin/addUser", requireAuth, async (req, res) => {
+    if (!req.user.isAdmin) {
+        return res.status(403).send("Forbidden");
+    }
+
+    const { username, password, isAdmin } = req.body;
+
+    // Validate input if needed
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+        username,
+        password: hashedPassword,
+        isAdmin: isAdmin === "on",
+    });
+
+    await newUser.save();
+    res.redirect("/admin");
+});
+
+// Delete a user (admin only)
+app.post("/admin/deleteUser/:username", requireAuth, async (req, res) => {
+    if (!req.user.isAdmin) {
+        return res.status(403).send("Forbidden");
+    }
+
+    const usernameToDelete = req.params.username;
+
+    try {
+        // Validate username if needed
+
+        await User.findOneAndDelete({ username: usernameToDelete });
+        res.redirect("/admin");
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+// Edit user details (admin only)
+app.get("/admin/editUser/:userId", requireAuth, async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).send("User not found");
+        }
+
+        res.render("editUser", { user: user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
+});
+
+app.post("/admin/editUser", requireAuth, async (req, res) => {
+    try {
+        const { userId, username, password, isAdmin } = req.body;
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        await User.findByIdAndUpdate(userId, {
+            username,
+            password: hashedPassword,
+            isAdmin: isAdmin === "on",
+        });
+
+        res.redirect("/admin");
     } catch (error) {
         console.error(error);
         res.status(500).send("Internal Server Error");
