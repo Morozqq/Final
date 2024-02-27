@@ -402,15 +402,13 @@ app.post(
         news.save()
             .then((result) => {
                 console.log(result);
-                res.status(201).json({
-                    message: "News created successfully",
-                    news: result,
-                });
+                res.status(201).json();
             })
             .catch((err) => {
                 console.log(err);
                 res.status(500).json({ error: err });
             });
+        res.redirect("/admin");
     }
 );
 

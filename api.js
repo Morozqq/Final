@@ -5,7 +5,8 @@ const NEWSAPI_KEY = "67a14609965043f8a11737304bb37d60";
 async function getTeslaNews() {
     try {
         const response = await axios.get(
-            `https://newsapi.org/v2/everything?q=tesla&from=2024-01-27&sortBy=publishedAt&apiKey=8f229b9306ae48bd9cb05211e0bfecd2` +
+            `
+            https://newsapi.org/v2/everything?q=tesla&from=2024-01-28&sortBy=publishedAt&apiKey=8f229b9306ae48bd9cb05211e0bfecd2` +
                 `&pageSize=10`
         );
         const responseData = response?.data?.articles;
