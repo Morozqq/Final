@@ -1,7 +1,7 @@
 # Final
 
 # Start the project
-npm i axios bcrypt body-parser ejs express express-session mongoose multer
+npm i axios bcryptjs body-parser ejs express express-session mongoose multer
 To start the project: npm start
 
 # Registration 
